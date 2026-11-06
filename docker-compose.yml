@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: voice2store-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: voice2store
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+    container_name: voice2store-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.example
+    environment:
+      APP_ENV: production
+      BACKEND_PORT: 8000
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/voice2store
+      CORS_ORIGINS: '["http://localhost:3000"]'
+      ALLOWED_HOSTS: '["localhost","127.0.0.1","backend","frontend"]'
+      LOG_LEVEL: INFO
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    container_name: voice2store-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
